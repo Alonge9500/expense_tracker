@@ -1,0 +1,7 @@
+cohere
+db-sqlite3
+pandas
+plotly
+python-dotenv
+qdrant-client
+sentence-transformers
