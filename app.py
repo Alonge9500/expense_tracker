@@ -3,14 +3,15 @@ import pandas as pd
 import plotly.express as px
 from expenses_db import add_income, add_expense, add_savings, get_data
 from datetime import datetime, timedelta
-
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Personal Finance Manager",
                    layout="centered",
                    page_icon=":sparkles:",
                    
                   )
-
+sns.set(style="darkgrid")
 # Sidebar navigation
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Monitoring", "Data Input"])
@@ -62,8 +63,21 @@ if page == "Monitoring":
     st.header("Spending Categories")
     if not expenses_df.empty:
         category_sum = expenses_df.groupby("category")["amount"].sum().reset_index()
-        fig = px.pie(category_sum, names='category', values='amount', title='Spending by Category')
-        st.plotly_chart(fig)
+        # Sort and select the top 10 categories by amount
+        top_10_categories = category_sum.nlargest(10, 'amount')
+
+        # Create the pie chart
+        plt.figure(figsize=(10, 10))  # Make the chart larger
+        plt.pie(top_10_categories['amount'], labels=top_10_categories['category'], autopct='%1.1f%%', startangle=90)
+
+        # Set the title
+        plt.title('Top 10 Spending by Category')
+
+        # Equal aspect ratio ensures that pie chart is drawn as a circle
+        plt.axis('equal')  
+
+        # Display the chart in Streamlit
+        st.pyplot(plt.gcf())
 
     # Savings Goals
     st.header("Savings Goals")
@@ -78,8 +92,54 @@ if page == "Monitoring":
         income_df.assign(Type='Income')[['date', 'amount', 'Type']],
         expenses_df.assign(Type='Expenses')[['date', 'amount', 'Type']]
     ])
-    fig = px.line(income_vs_expenses_df, x='date', y='amount', color='Type', title='Income vs. Expenses Over Time')
-    st.plotly_chart(fig)
+    # fig = px.line(income_vs_expenses_df, x='date', y='amount', color='Type', title='Income vs. Expenses Over Time')
+    # st.plotly_chart(fig)
+
+    # fig = px.line(expenses_df, x='date', y='amount', title='Expenses Over Time')
+    # st.plotly_chart(fig)
+
+    # fig = px.line(income_df, x='date', y='amount', title='Income Over Time')
+    # st.plotly_chart(fig)
+
+    # Income vs. Expenses Over Time
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(data=income_vs_expenses_df, x='date', y='amount', hue='Type')
+    plt.title('Income vs. Expenses Over Time')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(plt.gcf())  # Display plot in Streamlit
+
+    # Expenses Over Time
+    expenses_df['date'] = pd.to_datetime(expenses_df['date'])
+
+    # Resample by week, summing up the income amounts
+    weekly_expenses_df = expenses_df.resample('D', on='date').sum().reset_index()
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(data=weekly_expenses_df, x='date', y='amount', marker='*', linestyle='-')
+    for indexs, rows in weekly_expenses_df.iterrows():
+        plt.text(rows['date'], rows['amount'], f'{rows["amount"]:.2f}', fontsize=9, ha='right')
+    plt.title('Expenses Over Time (By Week)')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(plt.gcf())
+
+    income_df['date'] = pd.to_datetime(income_df['date'])
+
+    # Resample by week, summing up the income amounts
+    weekly_income_df = income_df.resample('W', on='date').sum().reset_index()
+
+    # Plot Income Over Time (Weekly)
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(data=weekly_income_df, x='date', y='amount', marker='*', linestyle='-')
+    for index, row in weekly_income_df.iterrows():
+        plt.text(row['date'], row['amount'], f'{row["amount"]:.2f}', fontsize=9, ha='right')
+    plt.title('Income Over Time (Weekly)')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Display the plot in Streamlit
+    st.pyplot(plt.gcf())
+
 
     # Monthly Income and Expenses Comparison
     st.header("Monthly Income and Expenses Comparison")
